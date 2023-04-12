@@ -82,9 +82,9 @@ func newConfig(provider *Provider, opts ProviderOptions) *oauth2.Config {
 	}
 
 	c := &oauth2.Config{
-		ClientID: provider.ClientKey,
-		//ClientSecret: provider.Secret,
-		RedirectURL: provider.CallbackURL,
+		ClientID:     provider.ClientKey,
+		ClientSecret: provider.Secret,
+		RedirectURL:  provider.CallbackURL,
 		Endpoint: oauth2.Endpoint{
 			AuthURL:  fmt.Sprintf(authURLTemplate, tenant),
 			TokenURL: fmt.Sprintf(tokenURLTemplate, tenant),
