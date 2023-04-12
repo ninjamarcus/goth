@@ -15,7 +15,7 @@ import (
 
 // also https://docs.microsoft.com/en-us/azure/active-directory/develop/active-directory-v2-protocols#endpoints
 const (
-	authURLTemplate  string = "https://login.microsoftonline.com/%s/oauth2/v2.0/authorize&prompt=login"
+	authURLTemplate  string = "https://login.microsoftonline.com/%s/oauth2/v2.0/authorize"
 	tokenURLTemplate string = "https://login.microsoftonline.com/%s/oauth2/v2.0/token"
 	graphAPIResource string = "https://graph.microsoft.com/v1.0/"
 )
@@ -129,6 +129,7 @@ func (p *Provider) BeginAuth(state string) (goth.Session, error) {
 
 	authURL := p.config.AuthCodeURL(
 		state,
+		oauth2.SetAuthURLParam("prompt", "login"),
 		//enable PKCE
 		oauth2.SetAuthURLParam("code_challenge_method", "S256"),
 		//Set the code challenge
