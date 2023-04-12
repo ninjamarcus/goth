@@ -1,10 +1,12 @@
 package azureadv2
 
 import (
+	"crypto/rand"
+	"crypto/sha256"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 
 	"github.com/markbates/goth"
@@ -120,10 +122,22 @@ func (p *Provider) Debug(debug bool) {}
 
 // BeginAuth asks for an authentication end-point for AzureAD.
 func (p *Provider) BeginAuth(state string) (goth.Session, error) {
-	authURL := p.config.AuthCodeURL(state)
+	codeVerifier, codeChallenge, err := getPKCE()
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate PKCE code challenge: %v", err)
+	}
+
+	authURL := p.config.AuthCodeURL(
+		state,
+		//enable PKCE
+		oauth2.SetAuthURLParam("code_challenge_method", "S256"),
+		//Set the code challenge
+		oauth2.SetAuthURLParam("code_challenge", codeChallenge),
+	)
 
 	return &Session{
-		AuthURL: authURL,
+		AuthURL:      authURL,
+		CodeVerifier: codeVerifier,
 	}, nil
 }
 
@@ -199,7 +213,7 @@ func userFromReader(r io.Reader, user *goth.User) error {
 		UserPrincipalName string   `json:"userPrincipalName"` // The user's principal name.
 	}{}
 
-	userBytes, err := ioutil.ReadAll(r)
+	userBytes, err := io.ReadAll(r)
 	if err != nil {
 		return err
 	}
@@ -230,4 +244,28 @@ func scopesToStrings(scopes ...ScopeType) []string {
 		strs[i] = string(scopes[i])
 	}
 	return strs
+}
+
+func getPKCE() (string, string, error) {
+	codeVerifier, err := generateCodeVerifier()
+	if err != nil {
+		return "", "", err
+	}
+	codeChallenge := generateCodeChallenge(codeVerifier)
+	return codeVerifier, codeChallenge, nil
+}
+
+func generateCodeVerifier() (string, error) {
+	b := make([]byte, 32)
+	_, err := rand.Read(b)
+	if err != nil {
+		return "", err
+	}
+	return base64.RawURLEncoding.EncodeToString(b), nil
+}
+
+func generateCodeChallenge(codeVerifier string) string {
+	h := sha256.New()
+	h.Write([]byte(codeVerifier))
+	return base64.RawURLEncoding.EncodeToString(h.Sum(nil))
 }

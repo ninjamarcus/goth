@@ -3,6 +3,7 @@ package azureadv2
 import (
 	"encoding/json"
 	"errors"
+	"golang.org/x/oauth2"
 	"strings"
 	"time"
 
@@ -15,6 +16,7 @@ type Session struct {
 	AccessToken  string    `json:"at"`
 	RefreshToken string    `json:"rt"`
 	ExpiresAt    time.Time `json:"exp"`
+	CodeVerifier string    `json:"cv"`
 }
 
 // GetAuthURL will return the URL set by calling the `BeginAuth` func
@@ -29,7 +31,10 @@ func (s Session) GetAuthURL() (string, error) {
 // Authorize the session with AzureAD and return the access token to be stored for future use.
 func (s *Session) Authorize(provider goth.Provider, params goth.Params) (string, error) {
 	p := provider.(*Provider)
-	token, err := p.config.Exchange(goth.ContextForClient(p.Client()), params.Get("code"))
+	token, err := p.config.Exchange(goth.ContextForClient(
+		p.Client()),
+		params.Get("code"),
+		oauth2.SetAuthURLParam("code_verifier", s.CodeVerifier))
 	if err != nil {
 		return "", err
 	}
